@@ -23,15 +23,15 @@ class ParameterScan (object):
         self.width = 2.5
         self.alpha = 0.7
         self.title = None
-        self.xlabel = None
-        self.ylabel = None
-        self.zlabel = None
+        self.xlabel = 'toSet'
+        self.ylabel = 'toSet'
+        self.zlabel = 'toSet'
         self.colormap = "seismic"
         self.colorbar = True
         self.antialias = True
         self.sameColor = False
 
-
+    
     def Sim(self):
         """Runs a simulation and returns the result for a plotting function. Not intended to
         be called by user."""
@@ -170,62 +170,97 @@ class ParameterScan (object):
         http://matplotlib.org/examples/color/colormaps_reference.html.
 
         p.plotSurface()"""
-        if self.independent is None or self.dependent is None:
-            self.independent = ['Time']
-            aa = self.rr.model.getGlobalParameterIds()[0]
-            self.independent.append(aa)
-            self.dependent = self.rr.model.getFloatingSpeciesIds()[0].split()
-            print 'Warning: self.independent and self.dependent not set. Using' \
-            ' self.independent = %s and self.dependent = %s' % (self.independent, self.dependent)
-        if not isinstance(self.independent, list) or not isinstance(self.dependent, list):
-            raise Exception('self.indpendent and self.dependent must be lists')
-        if self.startValue is None:
-            if self.independent[0] != 'Time' and self.independent[0] != 'time':
-                self.startValue = self.rr.model[self.independent[0]]
-            else:
-                self.startValue = self.rr.model[self.independent[1]]
-        if self.endValue is None:
-            self.endValue = self.startValue + 5
-
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
-        interval = (self.endTime - self.startTime) / float(self.numberOfPoints - 1)
-        X = np.arange(self.startTime, (self.endTime + (interval - 0.001)), interval)
-        interval = (self.endValue - self.startValue) / float(self.numberOfPoints - 1)
-        Y = np.arange(self.startValue, (self.endValue + (interval - 0.001)), interval)
-        X, Y = np.meshgrid(X, Y)
-        self.rr.reset()
-        self.rr.model[self.independent[1]] = self.startValue
-        Z = self.rr.simulate(self.startTime, self.endTime, (self.numberOfPoints),
-                             self.dependent, integrator = self.integrator)
-        Z = Z.T
-        for i in range(self.numberOfPoints - 1):
+        try:
+#            if self.independent is None and self.dependent is None:
+#                self.independent = ['Time']
+#                defaultParameter = self.rr.model.getGlobalParameterIds()[0]
+#                self.independent.append(defaultParameter)
+#                defaultSpecies = self.rr.model.getFloatingSpeciesIds()[0]
+#                self.dependent = [defaultSpecies]
+#                print 'Warning: self.independent and self.dependent not set. Using' \
+#                ' self.independent = %s and self.dependent = %s' % (self.independent, self.dependent)
+            if self.independent is None:
+                self.independent = ['Time']
+                defaultParameter = self.rr.model.getGlobalParameterIds()[0]
+                self.independent.append(defaultParameter)
+                print 'Warning: self.independent not set. Using: {0}'.format(self.independent)
+            if self.dependent is None:
+                defaultSpecies = self.rr.model.getFloatingSpeciesIds()[0]
+                self.dependent = defaultSpecies
+                print 'Warning: self.dependent not set. Using: {0}'.format(self.dependent)
+                
+            if len(self.independent) < 2:
+                raise Exception('self.independent must contain two independent variables')
+            
+#            if not isinstance(self.independent, list) or not isinstance(self.dependent, list):
+#                raise Exception('self.indpendent and self.dependent must be lists of strings')
+            if not isinstance(self.independent, list):
+                raise Exception('self.independent must be a list of strings')
+            if not isinstance(self.dependent, str):
+                raise Exception('self.dependent must be a string')
+            if self.startValue is None:
+                if self.independent[0] != 'Time' and self.independent[0] != 'time':
+                    self.startValue = self.rr.model[self.independent[0]]
+                else:
+                    self.startValue = self.rr.model[self.independent[1]]
+            if self.endValue is None:
+                self.endValue = self.startValue + 5
+    
+    
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            interval = (self.endTime - self.startTime) / float(self.numberOfPoints - 1)
+            X = np.arange(self.startTime, (self.endTime + (interval - 0.001)), interval)
+            interval = (self.endValue - self.startValue) / float(self.numberOfPoints - 1)
+            Y = np.arange(self.startValue, (self.endValue + (interval - 0.001)), interval)
+            X, Y = np.meshgrid(X, Y)
             self.rr.reset()
-            self.rr.model[self.independent[1]] = self.startValue + ((i + 1) * interval)
-            Z1 = self.rr.simulate(self.startTime, self.endTime, (self.numberOfPoints),
-                                 self.dependent, integrator = self.integrator)
-            Z1 = Z1.T
-            Z = np.concatenate ((Z, Z1))
-
-        if self.antialias is False:
-            surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap = self.colormap,
-                                   antialiased = False, linewidth=0)
-        else:
-            surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap = self.colormap,
-                                   linewidth=0)
-
-        ax.yaxis.set_major_locator(LinearLocator((6)))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        ax.set_xlabel(self.independent[0]) if self.xlabel is None else ax.set_xlabel(self.xlabel)
-        ax.set_ylabel(self.independent[1]) if self.ylabel is None else ax.set_ylabel(self.ylabel)
-        ax.set_zlabel(self.dependent[0]) if self.zlabel is None else ax.set_zlabel(self.zlabel)
-        if self.title is not None:
-            ax.set_title(self.title)
-
-        if self.colorbar is True:
-            fig.colorbar(surf, shrink=0.5, aspect=4)
-
-        plt.show()
+            self.rr.model[self.independent[1]] = self.startValue
+            Z = self.rr.simulate(self.startTime, self.endTime, (self.numberOfPoints),
+                                 [self.dependent], integrator = self.integrator)
+            Z = Z.T
+            for i in range(self.numberOfPoints - 1):
+                self.rr.reset()
+                self.rr.model[self.independent[1]] = self.startValue + ((i + 1) * interval)
+                Z1 = self.rr.simulate(self.startTime, self.endTime, (self.numberOfPoints),
+                                     [self.dependent], integrator = self.integrator)
+                Z1 = Z1.T
+                Z = np.concatenate ((Z, Z1))
+    
+            if self.antialias is False:
+                surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap = self.colormap,
+                                       antialiased = False, linewidth=0)
+            else:
+                surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap = self.colormap,
+                                       linewidth=0)
+    
+            ax.yaxis.set_major_locator(LinearLocator((6)))
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            if self.xlabel == 'toSet':
+                ax.set_xlabel(self.independent[0])
+            elif self.xlabel:
+                ax.set_xlabel(self.xlabel)
+            if self.ylabel == 'toSet':
+                ax.set_ylabel(self.independent[1])
+            elif self.ylabel:
+                ax.set_ylabel(self.ylabel)
+            if self.zlabel == 'toSet':
+                ax.set_zlabel(self.dependent)
+            elif self.zlabel:
+                ax.set_zlabel(self.zlabel)
+#            ax.set_xlabel(self.independent[0]) if self.xlabel is None else ax.set_xlabel(self.xlabel)
+#            ax.set_ylabel(self.independent[1]) if self.ylabel is None else ax.set_ylabel(self.ylabel)
+#            ax.set_zlabel(self.dependent) if self.zlabel is None else ax.set_zlabel(self.zlabel)
+            if self.title is not None:
+                ax.set_title(self.title)
+    
+            if self.colorbar:
+                fig.colorbar(surf, shrink=0.5, aspect=4)
+    
+            plt.show()
+        
+        except Exception as e:
+            print 'error: {0}'.format(e.message)
 
     def plotMultiArray(self, param1, param1Range, param2, param2Range):
         """Plots separate arrays for each possible combination of the contents of param1range and
@@ -324,6 +359,7 @@ class ParameterScan (object):
                 color.append(self.colormap(count))
                 count += interval
         self.color = color
+        
 
 
 class SteadyStateScan (object):

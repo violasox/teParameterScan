@@ -1,5 +1,8 @@
 import tellurium as te
-from tellurium import ParameterScan as ps
+import imp
+
+ps = imp.load_source('ParameterScan', 'D:/ParameterScan/ParameterScan.py')
+#foo.MyClass()
 
 
 cell = '''
@@ -16,10 +19,11 @@ p = ps.ParameterScan(rr)
 
 p.endTime = 3
 p.colormap = p.createColormap([.12,.56,1], [.86,.08,.23])
-p.dependent = ['S1']
-p.independent = ['time', 'k1']
+#p.dependent = 'S1'
+#p.independent = ['time', 'k1']
 p.startValue = 0.5
 p.endValue = 5
 p.title = 'Concentration of S1'
+p.zlabel = None
 
 p.plotSurface()
