@@ -91,21 +91,23 @@ class ParameterScan (object):
             self.endValue = float(self.endValue)
         if self.selection is None:
             self.selection = self.value
+        polyNumber = float(self.polyNumber)
 #        if self.value is None:
 #            self.value = self.rr.model.getFloatingSpeciesIds()[0]
 #            print 'Warning: self.value not set. Using self.value = %s' % self.value
         self.rr.model[self.value] = self.startValue
         m = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
                              ["Time", self.selection], integrator = self.integrator)
-        interval = ((self.endValue - self.startValue) / (self.polyNumber))
+        interval = ((self.endValue - self.startValue) / (polyNumber - 1))
         start = self.startValue
-        while start < self.endValue:
+        while start < self.endValue - .00001:
             self.rr.reset()
+            start += interval
             self.rr.model[self.value] = start
             m1 = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
                                   [self.selection], integrator = self.integrator)
             m = np.hstack((m, m1))
-            start += interval
+
         return m
 
     def plotGraduatedArray(self):
@@ -154,24 +156,27 @@ class ParameterScan (object):
         ax = fig.gca(projection='3d')
         if self.startValue is None:
             self.startValue = self.rr.model[self.value]
-        columnNumber = int((((self.endValue - self.startValue) / self.polyNumber)) + 2)
-        columnNumber = self.polyNumber
+        columnNumber = self.polyNumber + 1
         lastPoint = [self.endTime]
-        for i in range(columnNumber):
+        firstPoint = [self.startTime]
+        for i in range(int(columnNumber) - 1):
             lastPoint.append(0)
+            firstPoint.append(0)
         lastPoint = np.array(lastPoint)
-        lastPoint = np.vstack((result, lastPoint))
+        firstPoint = np.array(firstPoint)
+        zresult = np.vstack((result, lastPoint))
+        zresult = np.vstack((firstPoint, zresult))
         zs = []
         result = []
-        for i in range(columnNumber):
+        for i in range(int(columnNumber)-1):
             zs.append(i)
-            result.append(zip(lastPoint[:,0], lastPoint[:,(i+1)]))
+            result.append(zip(zresult[:,0], zresult[:,(i+1)]))
         if self.color is None:
             poly = PolyCollection(result)
         else:
             if len(self.color) != self.polyNumber:
                 self.color = self.colorCycle()
-            poly = PolyCollection(result, facecolors = self.color)
+            poly = PolyCollection(result, facecolors = self.color, closed = False)
 
         poly.set_alpha(self.alpha)
         ax.add_collection3d(poly, zs=zs, zdir='y')
@@ -179,15 +184,15 @@ class ParameterScan (object):
         ax.set_ylim3d(0, (columnNumber - 1))
         ax.set_zlim3d(0, (self.endValue + interval))
         if self.xlabel == 'toSet':
-            ax.set_xlabel(self.independent[0])
+            ax.set_xlabel('Time')
         elif self.xlabel:
             ax.set_xlabel(self.xlabel)
         if self.ylabel == 'toSet':
-            ax.set_ylabel(self.independent[1])
+            ax.set_ylabel('Trial Number')
         elif self.ylabel:
             ax.set_ylabel(self.ylabel)
         if self.zlabel == 'toSet':
-            ax.set_zlabel(self.dependent)
+            ax.set_zlabel(self.value)
         elif self.zlabel:
             ax.set_zlabel(self.zlabel)
 #        ax.set_xlabel('Time') if self.xlabel is None else ax.set_xlabel(self.xlabel)
