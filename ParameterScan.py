@@ -32,7 +32,7 @@ class ParameterScan (object):
         self.sameColor = False
 
     
-    def Sim(self):
+    def sim(self):
         """Runs a simulation and returns the result for a plotting function. Not intended to
         be called by user."""
         if self.selection is None:
@@ -47,7 +47,7 @@ class ParameterScan (object):
         """Plots result of simulation with options for linewdith and line color.
 
         p.plotArray()"""
-        result = self.Sim()
+        result = self.sim()
         if self.color is None:
             plt.plot(result[:,0], result[:,1:], linewidth = self.width)
         else:
@@ -57,10 +57,20 @@ class ParameterScan (object):
                 plt.plot(result[:,0], result[:,(i+1)],
                          color = self.color[i], linewidth = self.width)
 
-        if self.ylabel is not None:
-            plt.ylabel(self.ylabel)
-        if self.xlabel is not None:
+#        if self.ylabel is not None:
+#            plt.ylabel(self.ylabel)
+#        if self.xlabel is not None:
+#            plt.xlabel(self.xlabel)
+            
+        if self.xlabel == 'toSet':
+            plt.xlabel('time')
+        elif self.xlabel:
             plt.xlabel(self.xlabel)
+        if self.ylabel == 'toSet':
+            plt.ylabel('concentration')
+        elif self.ylabel:
+            plt.ylabel(self.ylabel)
+            
         if self.title is not None:
             plt.suptitle(self.title)
         plt.show()
@@ -74,27 +84,28 @@ class ParameterScan (object):
         if self.startValue is None:
             self.startValue = self.rr.model[self.value]
         else:
-            self.startValue = self.startValue
+            self.startValue = float(self.startValue)
         if self.endValue is None:
             self.endValue = self.startValue + 5
         else:
-            self.endValue = self.endValue
+            self.endValue = float(self.endValue)
         if self.selection is None:
             self.selection = self.value
-        if self.value is None:
-            self.value = self.rr.model.getFloatingSpeciesIds()[0]
-            print 'Warning: self.value not set. Using self.value = %s' % self.value
+#        if self.value is None:
+#            self.value = self.rr.model.getFloatingSpeciesIds()[0]
+#            print 'Warning: self.value not set. Using self.value = %s' % self.value
+        self.rr.model[self.value] = self.startValue
         m = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
                              ["Time", self.selection], integrator = self.integrator)
-        interval = ((self.endValue - self.startValue) / (self.polyNumber - 1))
+        interval = ((self.endValue - self.startValue) / (self.polyNumber))
         start = self.startValue
-        while start < (self.endValue - .00001):
+        while start < self.endValue:
             self.rr.reset()
-            start += interval
             self.rr.model[self.value] = start
             m1 = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
                                   [self.selection], integrator = self.integrator)
             m = np.hstack((m, m1))
+            start += interval
         return m
 
     def plotGraduatedArray(self):
@@ -112,13 +123,23 @@ class ParameterScan (object):
                 self.color = self.colorCycle()
             for i in range(self.polyNumber):
                 plt.plot(result[:,0], result[:,(i+1)], color = self.color[i],
-                         linewidth = self.width)
-        if self.ylabel is not None:
-            plt.ylabel(self.ylabel)
-        if self.xlabel is not None:
-            plt.xlabel(self.xlabel)
+                             linewidth = self.width)
+                         
+         
+#        if self.ylabel is not None:
+#            plt.ylabel(self.ylabel)
+#        if self.xlabel is not None:
+#            plt.xlabel(self.xlabel)
         if self.title is not None:
             plt.suptitle(self.title)
+        if self.xlabel == 'toSet':
+            plt.xlabel('time')
+        elif self.xlabel:
+            plt.xlabel(self.xlabel)
+        if self.ylabel == 'toSet':
+            plt.ylabel('concentration')
+        elif self.ylabel:
+            plt.ylabel(self.ylabel)
         plt.show()
 
     def plotPolyArray(self):
@@ -157,9 +178,21 @@ class ParameterScan (object):
         ax.set_xlim3d(0, self.endTime)
         ax.set_ylim3d(0, (columnNumber - 1))
         ax.set_zlim3d(0, (self.endValue + interval))
-        ax.set_xlabel('Time') if self.xlabel is None else ax.set_xlabel(self.xlabel)
-        ax.set_ylabel('Trial Number') if self.ylabel is None else ax.set_ylabel(self.ylabel)
-        ax.set_zlabel(self.value) if self.zlabel is None else ax.set_zlabel(self.zlabel)
+        if self.xlabel == 'toSet':
+            ax.set_xlabel(self.independent[0])
+        elif self.xlabel:
+            ax.set_xlabel(self.xlabel)
+        if self.ylabel == 'toSet':
+            ax.set_ylabel(self.independent[1])
+        elif self.ylabel:
+            ax.set_ylabel(self.ylabel)
+        if self.zlabel == 'toSet':
+            ax.set_zlabel(self.dependent)
+        elif self.zlabel:
+            ax.set_zlabel(self.zlabel)
+#        ax.set_xlabel('Time') if self.xlabel is None else ax.set_xlabel(self.xlabel)
+#        ax.set_ylabel('Trial Number') if self.ylabel is None else ax.set_ylabel(self.ylabel)
+#        ax.set_zlabel(self.value) if self.zlabel is None else ax.set_zlabel(self.zlabel)
         if self.title is not None:
             ax.set_title(self.title)
         plt.show()
