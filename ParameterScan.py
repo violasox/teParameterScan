@@ -81,6 +81,10 @@ class ParameterScan (object):
         if self.value is None:
             self.value = self.rr.model.getFloatingSpeciesIds()[0]
             print 'Warning: self.value not set. Using self.value = %s' % self.value
+        elif not isinstance(self.value, str):
+            raise ValueError('self.value must be a string')
+        elif self.value not in self.rr.model.getSpeciesIds():
+            raise ValueError('self.value cannot be found in loaded model')
         if self.startValue is None:
             self.startValue = self.rr.model[self.value]
         else:
@@ -91,6 +95,12 @@ class ParameterScan (object):
             self.endValue = float(self.endValue)
         if self.selection is None:
             self.selection = self.value
+        elif not isinstance(self.selection, list):
+            raise ValueError('self.selection must be a list of strings!')
+        else:
+            for species in self.selection:
+                if not isinstance(species, str) or species not in self.rr.model.getSpeciesIds():
+                    raise ValueError('{0} cannot be found in loaded model'.formate(species))
         polyNumber = float(self.polyNumber)
 #        if self.value is None:
 #            self.value = self.rr.model.getFloatingSpeciesIds()[0]
@@ -237,7 +247,7 @@ class ParameterScan (object):
             if not isinstance(self.dependent, str):
                 raise Exception('self.dependent must be a string')
             if self.startValue is None:
-                if self.independent[0] != 'Time' and self.independent[0] != 'time':
+                if self.independent[0].lower() != 'time':
                     self.startValue = self.rr.model[self.independent[0]]
                 else:
                     self.startValue = self.rr.model[self.independent[1]]
@@ -286,9 +296,6 @@ class ParameterScan (object):
                 ax.set_zlabel(self.dependent)
             elif self.zlabel:
                 ax.set_zlabel(self.zlabel)
-#            ax.set_xlabel(self.independent[0]) if self.xlabel is None else ax.set_xlabel(self.xlabel)
-#            ax.set_ylabel(self.independent[1]) if self.ylabel is None else ax.set_ylabel(self.ylabel)
-#            ax.set_zlabel(self.dependent) if self.zlabel is None else ax.set_zlabel(self.zlabel)
             if self.title is not None:
                 ax.set_title(self.title)
     
