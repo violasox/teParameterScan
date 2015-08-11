@@ -35,10 +35,14 @@ class ParameterScan (object):
     def sim(self):
         """Runs a simulation and returns the result for a plotting function. Not intended to
         be called by user."""
+        mdl = self.rr.model
         if self.selection is None:
             result = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
                                       integrator = self.integrator)
         else:
+            for species in self.selection:
+                if species not in mdl.getFloatingSpeciesIds() and species not in mdl.getBoundarySpeciesIds():
+                    raise ValueError('"{0}" is not a valid species in loaded model'.format(species))
             result = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
                                       self.selection, integrator = self.integrator)
         return result
@@ -78,15 +82,16 @@ class ParameterScan (object):
     def graduatedSim(self):
         """Runs successive simulations with incremental changes in one species, and returns
         results for a plotting function. Not intended to be called by user."""
+        mdl = self.rr.model
         if self.value is None:
-            self.value = self.rr.model.getFloatingSpeciesIds()[0]
+            self.value = mdl.getFloatingSpeciesIds()[0]
             print 'Warning: self.value not set. Using self.value = %s' % self.value
         elif not isinstance(self.value, str):
             raise ValueError('self.value must be a string')
-        elif self.value not in self.rr.model.getSpeciesIds():
+        elif self.value not in mdl.getFloatingSpeciesIds() and self.value not in mdl.getBoundarySpeciesIds():
             raise ValueError('self.value cannot be found in loaded model')
         if self.startValue is None:
-            self.startValue = self.rr.model[self.value]
+            self.startValue = mdl[self.value]
         else:
             self.startValue = float(self.startValue)
         if self.endValue is None:
@@ -94,28 +99,28 @@ class ParameterScan (object):
         else:
             self.endValue = float(self.endValue)
         if self.selection is None:
-            self.selection = self.value
+            self.selection = [self.value]
         elif not isinstance(self.selection, list):
             raise ValueError('self.selection must be a list of strings!')
         else:
             for species in self.selection:
-                if not isinstance(species, str) or species not in self.rr.model.getSpeciesIds():
-                    raise ValueError('{0} cannot be found in loaded model'.formate(species))
+                if not isinstance(species, str) or (species not in mdl.getFloatingSpeciesIds() and species not in mdl.getBoundarySpeciesIds()):
+                    raise ValueError('{0} cannot be found in loaded model'.format(species))
         polyNumber = float(self.polyNumber)
 #        if self.value is None:
 #            self.value = self.rr.model.getFloatingSpeciesIds()[0]
 #            print 'Warning: self.value not set. Using self.value = %s' % self.value
-        self.rr.model[self.value] = self.startValue
+        mdl[self.value] = self.startValue
         m = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
-                             ["Time", self.selection], integrator = self.integrator)
+                             ["Time", ', '.join(self.selection)], integrator = self.integrator)
         interval = ((self.endValue - self.startValue) / (polyNumber - 1))
         start = self.startValue
         while start < self.endValue - .00001:
             self.rr.reset()
             start += interval
-            self.rr.model[self.value] = start
+            mdl[self.value] = start
             m1 = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
-                                  [self.selection], integrator = self.integrator)
+                                  self.selection, integrator = self.integrator)
             m = np.hstack((m, m1))
 
         return m
@@ -180,7 +185,7 @@ class ParameterScan (object):
         result = []
         for i in range(int(columnNumber)-1):
             zs.append(i)
-            result.append(zip(zresult[:,0], zresult[:,(i+1)]))
+            result.append(zip(zresult[:,0], zresult[:,(i+1)]))   
         if self.color is None:
             poly = PolyCollection(result)
         else:
@@ -238,14 +243,14 @@ class ParameterScan (object):
                 print 'Warning: self.dependent not set. Using: {0}'.format(self.dependent)
                 
             if len(self.independent) < 2:
-                raise Exception('self.independent must contain two independent variables')
+                raise ValueError('self.independent must contain two independent variables')
             
 #            if not isinstance(self.independent, list) or not isinstance(self.dependent, list):
 #                raise Exception('self.indpendent and self.dependent must be lists of strings')
             if not isinstance(self.independent, list):
-                raise Exception('self.independent must be a list of strings')
+                raise ValueError('self.independent must be a list of strings')
             if not isinstance(self.dependent, str):
-                raise Exception('self.dependent must be a string')
+                raise ValueError('self.dependent must be a string')
             if self.startValue is None:
                 if self.independent[0].lower() != 'time':
                     self.startValue = self.rr.model[self.independent[0]]
@@ -313,6 +318,8 @@ class ParameterScan (object):
         initial conditions of each simulation.
 
         p.multiArrayPlot('S1', [1, 2, 3], 'S2', [1, 2])"""
+        mdl = self.rr.model        
+        
         f, axarr = plt.subplots(
             len(param1Range),
             len(param2Range),
@@ -325,13 +332,16 @@ class ParameterScan (object):
         for i, k1 in enumerate(param1Range):
             for j, k2 in enumerate(param2Range):
                 self.rr.reset()
-                self.rr.model[param1], self.rr.model[param2] = k1, k2
+                mdl[param1], mdl[param2] = k1, k2
                 if self.selection is None:
                     result = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
-                                              integrator = self.integrator)
+                                                integrator = self.integrator) 
                 else:
-                     result = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
-                                               self.selection, integrator = self.integrator)
+                    for species in self.selection:
+                        if species not in mdl.getFloatingSpeciesIds() and species not in mdl.getBoundarySpeciesIds():
+                            raise ValueError('"{0}" is not a valid species in loaded model'.format(species))
+                    result = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
+                                                  self.selection, integrator = self.integrator)
                 columns = result.shape[1]
                 legendItems = self.rr.selections[1:]
                 if columns-1 != len(legendItems):
@@ -358,11 +368,19 @@ class ParameterScan (object):
         p.colormap = p.createColorMap([0,0,0], [1,1,1])"""
 
         if isinstance(color1, str) is True:
-            color1 = matplotlib.colors.colorConverter.to_rgb('%s' % color1)
+            try:
+                color1 = matplotlib.colors.colorConverter.to_rgb('%s' % color1)
+            except ValueError:
+                print '"{0}" is not a valid color name, using default "blue" instead'.format(color1)
+                color1 = matplotlib.colors.colorConverter.to_rgb('blue')
         if isinstance(color2, str) is True:
-            color2 = matplotlib.colors.colorConverter.to_rgb('%s' % color2)
+            try:
+                color2 = matplotlib.colors.colorConverter.to_rgb('%s' % color2)
+            except ValueError:
+                print '"{0}" is not a valid color name, using default "blue" instead'.format(color2)
+                color2 = matplotlib.colors.colorConverter.to_rgb('blue')
 
-        print color1, color2
+#        print color1, color2
 
         cdict = {'red': ((0., 0., color1[0]),
                          (1., color2[0], 0.)),
