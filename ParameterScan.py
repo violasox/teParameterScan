@@ -37,12 +37,16 @@ class ParameterScan (object):
         be called by user."""
         mdl = self.rr.model
         if self.selection is None:
-            result = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
-                                      integrator = self.integrator)
+            result = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints, integrator = self.integrator)
         else:
-            for species in self.selection:
-                if species not in mdl.getFloatingSpeciesIds() and species not in mdl.getBoundarySpeciesIds():
-                    raise ValueError('"{0}" is not a valid species in loaded model'.format(species))
+            if not isinstance(self.selection, list):
+                self.selection = [self.selection]
+            if 'time' not in [item.lower() for item in self.selection]:
+                self.selection = ['time'] + self.selection
+            for item in self.selection:
+                if item not in mdl.getFloatingSpeciesIds() and item not in mdl.getBoundarySpeciesIds():
+                    if item.lower() != 'time':
+                        raise ValueError('"{0}" is not a valid species in loaded model'.format(item))
             result = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
                                       self.selection, integrator = self.integrator)
         return result
@@ -85,11 +89,11 @@ class ParameterScan (object):
         mdl = self.rr.model
         if self.value is None:
             self.value = mdl.getFloatingSpeciesIds()[0]
-            print 'Warning: self.value not set. Using self.value = %s' % self.value
+            print 'Warning: self.value not set. Using self.value = {0}'.format(self.value)
         elif not isinstance(self.value, str):
             raise ValueError('self.value must be a string')
         elif self.value not in mdl.getFloatingSpeciesIds() and self.value not in mdl.getBoundarySpeciesIds():
-            raise ValueError('self.value cannot be found in loaded model')
+            raise ValueError('self.value "{0}" cannot be found in loaded model'.format(self.value))
         if self.startValue is None:
             self.startValue = mdl[self.value]
         else:
@@ -100,19 +104,25 @@ class ParameterScan (object):
             self.endValue = float(self.endValue)
         if self.selection is None:
             self.selection = [self.value]
-        elif not isinstance(self.selection, list):
-            raise ValueError('self.selection must be a list of strings!')
         else:
-            for species in self.selection:
-                if not isinstance(species, str) or (species not in mdl.getFloatingSpeciesIds() and species not in mdl.getBoundarySpeciesIds()):
-                    raise ValueError('{0} cannot be found in loaded model'.format(species))
+            if not isinstance(self.selection, list):
+                self.selection = [self.selection]
+#            if 'time' in [item.lower() for item in self.selection]:
+#                self.selection = ['time'] + self.selection
+            for item in self.selection:
+                if item.lower() == 'time':
+                    self.selection.remove(item)
+                if not isinstance(item, str) or (item not in mdl.getFloatingSpeciesIds() and item not in mdl.getBoundarySpeciesIds()):
+                    if item.lower() != 'time':
+                        raise ValueError('{0} cannot be found in loaded model'.format(item))
+                    
         polyNumber = float(self.polyNumber)
 #        if self.value is None:
 #            self.value = self.rr.model.getFloatingSpeciesIds()[0]
 #            print 'Warning: self.value not set. Using self.value = %s' % self.value
         mdl[self.value] = self.startValue
         m = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
-                             ["Time", ', '.join(self.selection)], integrator = self.integrator)
+                             ['time', ', '.join(self.selection)], integrator = self.integrator)
         interval = ((self.endValue - self.startValue) / (polyNumber - 1))
         start = self.startValue
         while start < self.endValue - .00001:
@@ -337,9 +347,12 @@ class ParameterScan (object):
                     result = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
                                                 integrator = self.integrator) 
                 else:
-                    for species in self.selection:
-                        if species not in mdl.getFloatingSpeciesIds() and species not in mdl.getBoundarySpeciesIds():
-                            raise ValueError('"{0}" is not a valid species in loaded model'.format(species))
+                    if 'time' not in [item.lower() for item in self.selection]:
+                        self.selection = ['time'] + self.selection                    
+                    for item in self.selection:
+                        if item not in mdl.getFloatingSpeciesIds() and item not in mdl.getBoundarySpeciesIds():
+                            if item.lower() != 'time':
+                                raise ValueError('"{0}" is not a valid species in loaded model'.format(item))
                     result = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
                                                   self.selection, integrator = self.integrator)
                 columns = result.shape[1]
