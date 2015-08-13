@@ -30,6 +30,7 @@ class ParameterScan (object):
         self.colorbar = True
         self.antialias = True
         self.sameColor = False
+        self.legend = True
 
     
     def sim(self):
@@ -57,13 +58,14 @@ class ParameterScan (object):
         p.plotArray()"""
         result = self.sim()
         if self.color is None:
-            plt.plot(result[:,0], result[:,1:], linewidth = self.width)
+            for species in self.rr.selections[1:]:
+                plt.plot(result[:,0], result[species], linewidth = self.width, label = species)
         else:
             if len(self.color) != result.shape[1]:
                 self.color = self.colorCycle()
             for i in range(result.shape[1] - 1):
-                plt.plot(result[:,0], result[:,(i+1)],
-                         color = self.color[i], linewidth = self.width)
+                plt.plot(result[:,0], result[:,i+1], color = self.color[i], 
+                        linewidth = self.width, label = self.rr.selections[i+1])
 
 #        if self.ylabel is not None:
 #            plt.ylabel(self.ylabel)
@@ -78,9 +80,10 @@ class ParameterScan (object):
             plt.ylabel('concentration')
         elif self.ylabel:
             plt.ylabel(self.ylabel)
-            
         if self.title is not None:
             plt.suptitle(self.title)
+        if self.legend:
+            plt.legend()
         plt.show()
 
     def graduatedSim(self):
@@ -93,7 +96,8 @@ class ParameterScan (object):
         elif not isinstance(self.value, str):
             raise ValueError('self.value must be a string')
         elif self.value not in mdl.getFloatingSpeciesIds() and self.value not in mdl.getBoundarySpeciesIds():
-            raise ValueError('self.value "{0}" cannot be found in loaded model'.format(self.value))
+            if self.value not in mdl.getGlobalParameterIds():
+                raise ValueError('self.value "{0}" cannot be found in loaded model'.format(self.value))
         if self.startValue is None:
             self.startValue = mdl[self.value]
         else:
@@ -103,12 +107,10 @@ class ParameterScan (object):
         else:
             self.endValue = float(self.endValue)
         if self.selection is None:
-            self.selection = [self.value]
+            self.selection = [mdl.getFloatingSpeciesIds()[0]]
         else:
             if not isinstance(self.selection, list):
                 self.selection = [self.selection]
-#            if 'time' in [item.lower() for item in self.selection]:
-#                self.selection = ['time'] + self.selection
             for item in self.selection:
                 if item.lower() == 'time':
                     self.selection.remove(item)
@@ -117,9 +119,6 @@ class ParameterScan (object):
                         raise ValueError('{0} cannot be found in loaded model'.format(item))
                     
         polyNumber = float(self.polyNumber)
-#        if self.value is None:
-#            self.value = self.rr.model.getFloatingSpeciesIds()[0]
-#            print 'Warning: self.value not set. Using self.value = %s' % self.value
         mdl[self.value] = self.startValue
         m = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
                              ['time', ', '.join(self.selection)], integrator = self.integrator)
@@ -141,16 +140,22 @@ class ParameterScan (object):
 
         p.plotGraduatedArray()"""
         result = self.graduatedSim()
+        interval = ((self.endValue - self.startValue) / (self.polyNumber - 1))
         if self.color is None and self.sameColor is True:
-            plt.plot(result[:,0], result[:,1:], linewidth = self.width, color = 'b')
+            for i in range(self.polyNumber):
+                lbl = "{0} = {1}".format(self.value, round((self.startValue + (interval * i)), 2))
+                plt.plot(result[:,0], result[:,i+1], linewidth = self.width, color = 'b', label = lbl)
         elif self.color is None:
-            plt.plot(result[:,0], result[:,1:], linewidth = self.width)
+            for i in range(self.polyNumber):
+                lbl = "{0} = {1}".format(self.value, round((self.startValue + (interval * i)), 2))
+                plt.plot(result[:,0], result[:,i+1], linewidth = self.width, label = lbl)
         else:
             if len(self.color) != self.polyNumber:
                 self.color = self.colorCycle()
             for i in range(self.polyNumber):
+                lbl = "{0} = {1}".format(self.value, round((self.startValue + (interval * i)), 2))
                 plt.plot(result[:,0], result[:,(i+1)], color = self.color[i],
-                             linewidth = self.width)
+                             linewidth = self.width, label = lbl)
                          
          
 #        if self.ylabel is not None:
@@ -167,6 +172,8 @@ class ParameterScan (object):
             plt.ylabel('concentration')
         elif self.ylabel:
             plt.ylabel(self.ylabel)
+        if self.legend:
+            plt.legend()
         plt.show()
 
     def plotPolyArray(self):
