@@ -174,11 +174,6 @@ class ParameterScan (object):
                                  linewidth = self.width, label = lbl)
                 count += 1
                          
-         
-#        if self.ylabel is not None:
-#            plt.ylabel(self.ylabel)
-#        if self.xlabel is not None:
-#            plt.xlabel(self.xlabel)
         if self.title is not None:
             plt.suptitle(self.title)
         if self.xlabel == 'toSet':
@@ -279,8 +274,6 @@ class ParameterScan (object):
             if len(self.independent) < 2:
                 raise ValueError('self.independent must contain two independent variables')
             
-#            if not isinstance(self.independent, list) or not isinstance(self.dependent, list):
-#                raise Exception('self.indpendent and self.dependent must be lists of strings')
             if not isinstance(self.independent, list):
                 raise ValueError('self.independent must be a list of strings')
             if not isinstance(self.dependent, str):
@@ -389,6 +382,8 @@ class ParameterScan (object):
                         result[:, c+1],
                         linewidth = self.width,
                         label = legendItems[c])
+                if (self.legend):
+                    plt.legend(loc= 3, bbox_to_anchor=(0.5, 0.5))
 
                 if (i == (len(param1Range) - 1)):
                     axarr[i, j].set_xlabel('%s = %.2f' % (param2, k2))
@@ -416,8 +411,6 @@ class ParameterScan (object):
             except ValueError:
                 print '"{0}" is not a valid color name, using default "blue" instead'.format(color2)
                 color2 = matplotlib.colors.colorConverter.to_rgb('blue')
-
-#        print color1, color2
 
         cdict = {'red': ((0., 0., color1[0]),
                          (1., color2[0], 0.)),
