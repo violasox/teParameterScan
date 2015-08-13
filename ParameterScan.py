@@ -66,11 +66,6 @@ class ParameterScan (object):
             for i in range(result.shape[1] - 1):
                 plt.plot(result[:,0], result[:,i+1], color = self.color[i], 
                         linewidth = self.width, label = self.rr.selections[i+1])
-
-#        if self.ylabel is not None:
-#            plt.ylabel(self.ylabel)
-#        if self.xlabel is not None:
-#            plt.xlabel(self.xlabel)
             
         if self.xlabel == 'toSet':
             plt.xlabel('time')
@@ -117,11 +112,11 @@ class ParameterScan (object):
                 if not isinstance(item, str) or (item not in mdl.getFloatingSpeciesIds() and item not in mdl.getBoundarySpeciesIds()):
                     if item.lower() != 'time':
                         raise ValueError('{0} cannot be found in loaded model'.format(item))
-                    
+        self.selection = ['time'] + self.selection            
         polyNumber = float(self.polyNumber)
         mdl[self.value] = self.startValue
         m = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
-                             ['time', ', '.join(self.selection)], integrator = self.integrator)
+                             self.selection, integrator = self.integrator)
         interval = ((self.endValue - self.startValue) / (polyNumber - 1))
         start = self.startValue
         while start < self.endValue - .00001:
@@ -130,6 +125,7 @@ class ParameterScan (object):
             mdl[self.value] = start
             m1 = self.rr.simulate(self.startTime, self.endTime, self.numberOfPoints,
                                   self.selection, integrator = self.integrator)
+            m1 = np.delete(m1, 0, 1)
             m = np.hstack((m, m1))
 
         return m
@@ -142,20 +138,40 @@ class ParameterScan (object):
         result = self.graduatedSim()
         interval = ((self.endValue - self.startValue) / (self.polyNumber - 1))
         if self.color is None and self.sameColor is True:
-            for i in range(self.polyNumber):
-                lbl = "{0} = {1}".format(self.value, round((self.startValue + (interval * i)), 2))
-                plt.plot(result[:,0], result[:,i+1], linewidth = self.width, color = 'b', label = lbl)
+            count = 1
+            for species in self.selection[1:]:
+                for i in range(self.polyNumber):
+                    if len(self.selection) > 2:
+                        lbl = "{0}, {1} = {2}".format(species, self.value, round((self.startValue + (interval * i)), 2))
+                    else:
+                        lbl = "{0} = {1}".format(self.value, round((self.startValue + (interval * i)), 2))
+                    plt.plot(result[:,0], result[:,count], linewidth = self.width, color = 'b', label = lbl)
+                    count += 1
+                    
         elif self.color is None:
-            for i in range(self.polyNumber):
-                lbl = "{0} = {1}".format(self.value, round((self.startValue + (interval * i)), 2))
-                plt.plot(result[:,0], result[:,i+1], linewidth = self.width, label = lbl)
+            count = 1
+            for species in self.selection[1:]:
+                for i in range(self.polyNumber):
+                    if len(self.selection) > 2:
+                        lbl = "{0}, {1} = {2}".format(species, self.value, round((self.startValue + (interval * i)), 2))
+                    else:
+                        lbl = "{0} = {1}".format(self.value, round((self.startValue + (interval * i)), 2))
+                    plt.plot(result[:,0], result[:,count], linewidth = self.width, label = lbl)
+                    count += 1
+                    
         else:
             if len(self.color) != self.polyNumber:
                 self.color = self.colorCycle()
-            for i in range(self.polyNumber):
-                lbl = "{0} = {1}".format(self.value, round((self.startValue + (interval * i)), 2))
-                plt.plot(result[:,0], result[:,(i+1)], color = self.color[i],
-                             linewidth = self.width, label = lbl)
+            count = 1
+            for species in self.selection[1:]:
+                for i in range(self.polyNumber):
+                    if len(self.selection) > 2:
+                        lbl = "{0}, {1} = {2}".format(species, self.value, round((self.startValue + (interval * i)), 2))
+                    else:
+                        lbl = "{0} = {1}".format(self.value, round((self.startValue + (interval * i)), 2))
+                    plt.plot(result[:,0], result[:,count], color = self.color[i],
+                                 linewidth = self.width, label = lbl)
+                    count += 1
                          
          
 #        if self.ylabel is not None:
