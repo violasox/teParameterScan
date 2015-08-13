@@ -137,27 +137,28 @@ class ParameterScan (object):
         p.plotGraduatedArray()"""
         result = self.graduatedSim()
         interval = ((self.endValue - self.startValue) / (self.polyNumber - 1))
+        numSp = len(self.selection) - 1
         if self.color is None and self.sameColor is True:
             count = 1
             for species in self.selection[1:]:
                 for i in range(self.polyNumber):
-                    if len(self.selection) > 2:
+                    if numSp > 1:
                         lbl = "{0}, {1} = {2}".format(species, self.value, round((self.startValue + (interval * i)), 2))
                     else:
                         lbl = "{0} = {1}".format(self.value, round((self.startValue + (interval * i)), 2))
-                    plt.plot(result[:,0], result[:,count], linewidth = self.width, color = 'b', label = lbl)
-                    count += 1
+                    plt.plot(result[:,0], result[:,numSp*i+count], linewidth = self.width, color = 'b', label = lbl)
+                count += 1
                     
         elif self.color is None:
             count = 1
             for species in self.selection[1:]:
                 for i in range(self.polyNumber):
-                    if len(self.selection) > 2:
+                    if numSp > 1:
                         lbl = "{0}, {1} = {2}".format(species, self.value, round((self.startValue + (interval * i)), 2))
                     else:
                         lbl = "{0} = {1}".format(self.value, round((self.startValue + (interval * i)), 2))
-                    plt.plot(result[:,0], result[:,count], linewidth = self.width, label = lbl)
-                    count += 1
+                    plt.plot(result[:,0], result[:,numSp*i+count], linewidth = self.width, label = lbl)
+                count += 1
                     
         else:
             if len(self.color) != self.polyNumber:
@@ -165,13 +166,13 @@ class ParameterScan (object):
             count = 1
             for species in self.selection[1:]:
                 for i in range(self.polyNumber):
-                    if len(self.selection) > 2:
+                    if numSp > 1:
                         lbl = "{0}, {1} = {2}".format(species, self.value, round((self.startValue + (interval * i)), 2))
                     else:
                         lbl = "{0} = {1}".format(self.value, round((self.startValue + (interval * i)), 2))
-                    plt.plot(result[:,0], result[:,count], color = self.color[i],
+                    plt.plot(result[:,0], result[:,numSp*i+count], color = self.color[i],
                                  linewidth = self.width, label = lbl)
-                    count += 1
+                count += 1
                          
          
 #        if self.ylabel is not None:
